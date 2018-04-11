@@ -1,14 +1,22 @@
 package com.ritikrishu.indoorsui;
 
 import android.Manifest;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.os.Build;
 import android.support.annotation.NonNull;
+import android.support.annotation.RequiresApi;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Toast;
 
 import com.customlbs.library.IndoorsException;
@@ -21,17 +29,31 @@ import com.customlbs.library.util.IndoorsCoordinateUtil;
 import com.customlbs.shared.Coordinate;
 import com.customlbs.surface.library.IndoorsSurfaceFactory;
 import com.customlbs.surface.library.IndoorsSurfaceFragment;
+import com.ritikrishu.mylibrary.SDK;
 
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements IndoorsLocationListener {
+public class MainActivity extends AppCompatActivity {
 
-    Building building;
+    @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        getRequiredPermsAndStartIndoors();
+
+
+        CharSequence name = "ch_id";
+        String description = "channel_description";
+        int importance = NotificationManager.IMPORTANCE_DEFAULT;
+        NotificationChannel mChannel = new NotificationChannel("ch_id", name, importance);
+        mChannel.setDescription(description);
+        // Register the channel with the system; you can't change the importance
+        // or other notification behaviors after this
+        NotificationManager notificationManager = (NotificationManager) getSystemService(
+                NOTIFICATION_SERVICE);
+        if (notificationManager != null) {
+            notificationManager.createNotificationChannel(mChannel);
+        }
     }
 
 
@@ -45,7 +67,7 @@ public class MainActivity extends AppCompatActivity implements IndoorsLocationLi
                         ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_WIFI_STATE) == PackageManager.PERMISSION_GRANTED &&
                         ContextCompat.checkSelfPermission(this, Manifest.permission.CHANGE_WIFI_STATE) == PackageManager.PERMISSION_GRANTED
                 ){
-            startIndoors();
+            startIndoors(true);
         }
         else{
             ActivityCompat.requestPermissions(this, new String[]{
@@ -63,82 +85,19 @@ public class MainActivity extends AppCompatActivity implements IndoorsLocationLi
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        startIndoors();
+        startIndoors(true);
     }
 
-    private void startIndoors(){
-        IndoorsFactory.Builder indoorsBuilder = new IndoorsFactory.Builder();
-
-        IndoorsSurfaceFactory.Builder surfaceBuilder = new IndoorsSurfaceFactory.Builder();
-
-        indoorsBuilder.setContext(this);
-
-
-        indoorsBuilder.setApiKey("insert api key from WeWork Promenade v2");
-
-        indoorsBuilder.setBuildingId((long) 1119976587);
-
-        indoorsBuilder.setUserInteractionListener(this);
-
-        surfaceBuilder.setIndoorsBuilder(indoorsBuilder);
-
-        IndoorsSurfaceFragment indoorsFragment = surfaceBuilder.build();
-
-        FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
-        transaction.add(android.R.id.content, indoorsFragment, "indoors");
-        transaction.commit();
+    private void startIndoors(boolean shouldStart){
+        Intent sdkIntent = new Intent(this, SDK.class);
+        sdkIntent.putExtra(SDK.SHOULD_START, shouldStart);
+        startService(sdkIntent);
     }
 
-    @Override
-    public void loadingBuilding(LoadingBuildingStatus loadingBuildingStatus) {
-
+    public void startI(View v){
+        getRequiredPermsAndStartIndoors();
     }
-
-    @Override
-    public void buildingLoaded(Building building) {
-        this.building = building;
-    }
-
-    @Override
-    public void leftBuilding(Building building) {
-
-    }
-
-    @Override
-    public void buildingReleased(Building building) {
-
-    }
-
-    @Override
-    public void positionUpdated(Coordinate coordinate, int i) {
-        Location loc = IndoorsCoordinateUtil.toGeoLocation(coordinate, building);
-        if(loc != null){
-            Toast.makeText(this, loc.getLatitude() + "<- lat lng ->" + loc.getLongitude(), Toast.LENGTH_LONG).show();
-        }
-    }
-
-    @Override
-    public void orientationUpdated(float v) {
-
-    }
-
-    @Override
-    public void changedFloor(int i, String s) {
-
-    }
-
-    @Override
-    public void enteredZones(List<Zone> list) {
-
-    }
-
-    @Override
-    public void buildingLoadingCanceled() {
-
-    }
-
-    @Override
-    public void onError(IndoorsException e) {
-
+    public void stopI(View v){
+        startIndoors(false);
     }
 }
